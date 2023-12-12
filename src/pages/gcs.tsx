@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import toast, { Toaster } from "react-hot-toast";
+import Switch from "react-switch"
 import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
 import "leaflet/dist/leaflet.css";
 import { Canvas } from "@react-three/fiber"
@@ -29,6 +30,7 @@ function GCS() {
   const [reading, setReading] = useState(false);
   const [intrvl, setIntrvl] = useState<any>(0);
   const [primData, setPrimData] = useState<RecvData>();
+  const [telemetry, setTelemetry] = useState(true);
   const [mqttConnected, setMqttConnected] = useState(false);
 
   if (!window.__TAURI_IPC__) window.location.href = "/web";
@@ -140,7 +142,20 @@ function GCS() {
   return <div className="flex w-screen h-screen justify-center">
     <Toaster />
     <div className="flex flex-col grow">
-      <div className="p-1 flex justify-start gap-2">
+      <div className="p-1 flex justify-start items-center gap-2">
+        <div id="battery" className="bg-black overflow-clip h-[30px] w-20 ring-1 ring-white/70 m-1 rounded relative z-0 flex items-center justify-center">
+          <div className="font-bold">12.0V</div>
+          <div className="bg-green-600 rounded h-[30px] w-[69%] absolute left-0 top-0 -z-10"></div>
+          <div className="absolute -right-1.5 top-2 bg-white h-[13px] w-1.5 rounded-r z-0"></div>
+        </div>
+        <label htmlFor="telemetry" className="text-white/80 flex items-center gap-1 ml-2 text-xl ring-1 rounded-full p-0.5 pl-1 ring-white/50">
+          CX
+          <Switch checked={telemetry} defaultChecked onChange={(e) => {
+            invoke("send_command", { telem: `CX,${e ? "ON" : "OFF"}` });
+            setTelemetry(e);
+          }} />
+        </label>
+        <div className="grow"></div>
         <button className="" onClick={() => getPorts()}>
           <img
             src={reload}
@@ -150,7 +165,7 @@ function GCS() {
           />
         </button>
         <select
-          className="text-black bg-green-400"
+          className="text-black bg-green-400 h-fit py-1"
           onChange={(e) => setPort(e.target.value)}
         >
           <option value="NONE">none</option>
@@ -161,19 +176,13 @@ function GCS() {
             </option>
           ))}
         </select>
-        <button onClick={connect_mqtt} className="bg-green-300 text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
+        <button onClick={connect_mqtt} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
           {mqttConnected ? "MQTT ✅" : "Connect MQTT"}
         </button>
-        <div>
-          <input type="checkbox" id="telemetry" onChange={e => {
-            invoke("send_command", { telem: `CX,${e.target.checked ? "ON" : "OFF"}` });
-          }} />
-          <label htmlFor="telemetry">Telemetry</label>
-        </div>
 
       </div>
-      <div className="grow">
-        ok
+      <div className="grow relative">
+
       </div>
     </div>
     <div className=" h-full grid grid-rows-3 max-w-[25%]">
@@ -216,99 +225,6 @@ function GCS() {
       </div>
     </div>
   </div>
-
-  return (
-    <div className="p-2 flex flex-col gap-1 w-screen h-screen">
-      <Toaster />
-      <div className="flex justify-start gap-2">
-        <button className="" onClick={() => getPorts()}>
-          <img
-            src={reload}
-            className="active:rotate-90 invert"
-            width={16}
-            height={16}
-          />
-        </button>
-        <select
-          className="text-black bg-green-400"
-          onChange={(e) => setPort(e.target.value)}
-        >
-          <option value="NONE">none</option>
-          <option value="SIMULATE">simluate</option>
-          {serialPorts.map((port_name) => (
-            <option key={port_name} value={port_name}>
-              {port_name}
-            </option>
-          ))}
-        </select>
-        <button onClick={connect_mqtt} className="bg-green-300 text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
-          {mqttConnected ? "MQTT ✅" : "Connect MQTT"}
-        </button>
-        {/* <input
-          type="text"
-          className="ml-auto rounded px-1 text-black outline-none"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              invoke("write_serial", { writeData: e.currentTarget.value });
-              e.currentTarget.value = "";
-            }
-          }}
-        /> */}
-        <div>
-          <input type="checkbox" id="telemetry" onChange={e => {
-
-            invoke("send_command", { telem: `CX,${e.target.checked ? "ON" : "OFF"}` });
-          }} />
-          <label htmlFor="telemetry">Telemetry</label>
-        </div>
-      </div>
-
-      <div className="">
-        <div className="relative w-[200px] h-[200px]">
-          <Canvas
-            camera={{ position: [0, 0, 16], fov: 18 }}
-            style={{
-              backgroundColor: "transparent",
-            }}>
-            <Environment preset="studio" />
-            <Suspense fallback={null}>
-              <Model rotation={[Math.PI / 4, Math.PI / 4, 0]} />
-            </Suspense>
-            <OrbitControls enableZoom={false} />
-          </Canvas>
-          <div className="w-full text-center text-white/70">PARACHUTE DEPLOYED</div>
-        </div>
-      </div>
-
-      {/* {primData && (
-        <>
-          <div className="flex gap-1 text-black">
-            <Data>
-              Team ID: {primData.teamID}
-            </Data>
-            <Data>
-              Packet: {primData.packetCount}
-            </Data>
-            <Data>
-              T: {primData.time} | GPS: {primData.gpsTime}
-            </Data>
-            <Data>{primData.state}</Data>
-            <Data>
-              Last CMD: {primData.cmdEcho}
-            </Data>
-          </div>
-          <div>
-            ok
-          </div>
-        </>
-      )} */}
-
-      {/* <div className="fixed bottom-0 mx-auto w-full text-center text-sm text-white/70">
-        <div>{result}</div>
-        <div>{primData?.debugMsg}</div>
-      </div> */}
-    </div>
-  );
 }
 
 export default GCS;
