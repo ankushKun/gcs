@@ -1,10 +1,22 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import toast, { Toaster } from "react-hot-toast";
+import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
+import "leaflet/dist/leaflet.css";
+import { Canvas } from "@react-three/fiber"
+import { Environment, OrbitControls } from "@react-three/drei"
 import reload from "../assets/reload.png";
 // import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
 // import SmoothieComponent, { TimeSeries } from "react-smoothie";
 import { type RecvData } from "../types";
+import Model from "../assets/Dummysat.tsx"
+
+const pre = `TERMINAL
+A
+B
+C
+>>> D
+`
 
 const Data = ({ children }: { children: React.ReactNode }) => {
   return <div className=" text-green-500 ring-1 px-2 p-0.5 m-0.5 rounded ring-green-500/50">{children}</div>
@@ -125,8 +137,88 @@ function GCS() {
   //     ts2.append(time, Math.random());
   // }, 1000)
 
+  return <div className="flex w-screen h-screen justify-center">
+    <Toaster />
+    <div className="flex flex-col grow">
+      <div className="p-1 flex justify-start gap-2">
+        <button className="" onClick={() => getPorts()}>
+          <img
+            src={reload}
+            className="active:rotate-90 invert"
+            width={16}
+            height={16}
+          />
+        </button>
+        <select
+          className="text-black bg-green-400"
+          onChange={(e) => setPort(e.target.value)}
+        >
+          <option value="NONE">none</option>
+          <option value="SIMULATE">simluate</option>
+          {serialPorts.map((port_name) => (
+            <option key={port_name} value={port_name}>
+              {port_name}
+            </option>
+          ))}
+        </select>
+        <button onClick={connect_mqtt} className="bg-green-300 text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
+          {mqttConnected ? "MQTT ✅" : "Connect MQTT"}
+        </button>
+        <div>
+          <input type="checkbox" id="telemetry" onChange={e => {
+            invoke("send_command", { telem: `CX,${e.target.checked ? "ON" : "OFF"}` });
+          }} />
+          <label htmlFor="telemetry">Telemetry</label>
+        </div>
+
+      </div>
+      <div className="grow">
+        ok
+      </div>
+    </div>
+    <div className=" h-full grid grid-rows-3 max-w-[25%]">
+      <div className="">
+        <Canvas
+          camera={{ position: [0, 0, 16], fov: 18 }}
+          style={{
+            backgroundColor: "transparent",
+          }}>
+          <Environment preset="studio" />
+          <Suspense fallback={null}>
+            <Model rotation={[Math.PI / 4, Math.PI / 4, 0]} />
+          </Suspense>
+          <OrbitControls enableZoom={false} />
+        </Canvas>
+        <div className="w-full text-center relative -top-6">PARACHUTE DEPLOYED</div>
+      </div>
+      <div className="bg-black/10 relative overflow-clip h-full" id="map">
+        <MapContainer center={[30.76861111, 76.57388889]} zoom={17} scrollWheelZoom={false} className="h-full">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+            url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+          />
+          <CircleMarker center={[30.76861111, 76.57388889]} radius={3} color="red" >
+            <Popup>hi</Popup>
+          </CircleMarker>
+        </MapContainer>
+
+      </div>
+      <div className="bg-black/60 flex flex-col text-justify font-extralight text-green-400 p-1 px-2 overflow-scroll w-full">
+        <pre className="grow">
+          {pre}
+        </pre>
+        <input type="text" className="bg-black ring-1 ring-white/20 text-green-400 outline-none w-full" onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            invoke("write_serial", { writeData: e.currentTarget.value });
+            e.currentTarget.value = "";
+          }
+        }} />
+      </div>
+    </div>
+  </div>
+
   return (
-    <div className="p-2 flex flex-col gap-1">
+    <div className="p-2 flex flex-col gap-1 w-screen h-screen">
       <Toaster />
       <div className="flex justify-start gap-2">
         <button className="" onClick={() => getPorts()}>
@@ -170,7 +262,25 @@ function GCS() {
           <label htmlFor="telemetry">Telemetry</label>
         </div>
       </div>
-      {primData && (
+
+      <div className="">
+        <div className="relative w-[200px] h-[200px]">
+          <Canvas
+            camera={{ position: [0, 0, 16], fov: 18 }}
+            style={{
+              backgroundColor: "transparent",
+            }}>
+            <Environment preset="studio" />
+            <Suspense fallback={null}>
+              <Model rotation={[Math.PI / 4, Math.PI / 4, 0]} />
+            </Suspense>
+            <OrbitControls enableZoom={false} />
+          </Canvas>
+          <div className="w-full text-center text-white/70">PARACHUTE DEPLOYED</div>
+        </div>
+      </div>
+
+      {/* {primData && (
         <>
           <div className="flex gap-1 text-black">
             <Data>
@@ -191,12 +301,12 @@ function GCS() {
             ok
           </div>
         </>
-      )}
+      )} */}
 
-      <div className="fixed bottom-0 mx-auto w-full text-center text-sm text-white/70">
+      {/* <div className="fixed bottom-0 mx-auto w-full text-center text-sm text-white/70">
         <div>{result}</div>
         <div>{primData?.debugMsg}</div>
-      </div>
+      </div> */}
     </div>
   );
 }
