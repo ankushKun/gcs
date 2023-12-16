@@ -8,7 +8,7 @@ import { Canvas } from "@react-three/fiber"
 import { Environment, OrbitControls } from "@react-three/drei"
 import reload from "../assets/reload.png";
 // import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
-// import SmoothieComponent, { TimeSeries } from "react-smoothie";
+import SmoothieComponent, { TimeSeries } from "react-smoothie";
 import { type RecvData } from "../types";
 import Model from "../assets/Dummysat.tsx"
 
@@ -19,11 +19,20 @@ C
 >>> D
 `
 
-const Data = ({ children }: { children: React.ReactNode }) => {
-  return <div className=" text-green-500 ring-1 px-2 p-0.5 m-0.5 rounded ring-green-500/50">{children}</div>
-}
+// function useScreenSize() {
+//   const [size, setSize] = useState<{ width: number, height: number }>({ width: window.innerWidth, height: window.innerHeight });
+//   useEffect(() => {
+//     const handleResize = () => {
+//       setSize({ width: window.innerWidth, height: window.innerHeight })
+//     }
+//     window.addEventListener("resize", handleResize);
+//     return () => window.removeEventListener("resize", handleResize);
+//   }, []);
+//   return size;
+// }
 
 function GCS() {
+  // const { width, height } = useScreenSize();
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
   const [selectedPort, setSelectedPort] = useState<string>("none");
   const [result, setResult] = useState<string>("");
@@ -32,6 +41,11 @@ function GCS() {
   const [primData, setPrimData] = useState<RecvData>();
   const [telemetry, setTelemetry] = useState(true);
   const [mqttConnected, setMqttConnected] = useState(false);
+  const temperatureTS = new TimeSeries({});
+  const pressureTS = new TimeSeries({});
+  const altitudeTS = new TimeSeries({});
+  const airSpeedTS = new TimeSeries({});
+  const gpsAltitudeTS = new TimeSeries({});
 
   if (!window.__TAURI_IPC__) window.location.href = "/web";
 
@@ -126,18 +140,26 @@ function GCS() {
     });
   }
 
-  // const ts1 = new TimeSeries({});
-  // const ts2 = new TimeSeries({
-  //   resetBounds: true,
-  //   resetBoundsInterval: 1000,
-  // })
 
-  // setInterval(() => {
-  //     var time = new Date().getTime();
+  setInterval(() => {
+    var time = new Date().getTime();
 
-  //     ts1.append(time, Math.random());
-  //     ts2.append(time, Math.random());
-  // }, 1000)
+    // ts1.append(time, Math.random());
+    // ts2.append(time, Math.random());
+
+    // temperatureTS.append(time, primData?.temperature || 0);
+    // pressureTS.append(time, primData?.pressure || 0);
+    // airSpeedTS.append(time, primData?.airSpeed || 0);
+    // altitudeTS.append(time, primData?.altitude || 0);
+    // gpsAltitudeTS.append(time, primData?.gpsAltitude || 0);
+
+    temperatureTS.append(time, Math.random() * 10);
+    pressureTS.append(time, Math.random());
+    airSpeedTS.append(time, Math.random());
+    altitudeTS.append(time, Math.random());
+    gpsAltitudeTS.append(time, Math.random());
+
+  }, 1000)
 
   return <div className="flex w-screen h-screen justify-center">
     <Toaster />
@@ -145,7 +167,7 @@ function GCS() {
       <div className="p-1 flex justify-start items-center gap-2">
         <div id="battery" className="bg-black overflow-clip h-[30px] w-20 ring-1 ring-white/70 m-1 rounded relative z-0 flex items-center justify-center">
           <div className="font-bold">12.0V</div>
-          <div className="bg-green-600 rounded h-[30px] w-[69%] absolute left-0 top-0 -z-10"></div>
+          <div className="bg-green-600 rounded h-[30px] w-[90%] absolute left-0 top-0 -z-10"></div>
           <div className="absolute -right-1.5 top-2 bg-white h-[13px] w-1.5 rounded-r z-0"></div>
         </div>
         <label htmlFor="telemetry" className="text-white/80 flex items-center gap-1 ml-2 text-xl ring-1 rounded-full p-0.5 pl-1 ring-white/50">
@@ -168,7 +190,7 @@ function GCS() {
           className="text-black bg-green-400 h-fit py-1"
           onChange={(e) => setPort(e.target.value)}
         >
-          <option value="NONE">none</option>
+          <option value="NONE">no port selected</option>
           <option value="SIMULATE">simluate</option>
           {serialPorts.map((port_name) => (
             <option key={port_name} value={port_name}>
@@ -182,7 +204,96 @@ function GCS() {
 
       </div>
       <div className="grow relative">
+        <div id="graphs" className="flex justify-evenly gap-2 p-2">
+          <div className="border border-white/50 rounded">
+            <SmoothieComponent responsive className="rounded"
+              height={window.innerWidth * 0.15}
+              series={
+                [{
+                  data: temperatureTS,
+                  strokeStyle: { r: 255 },
+                  lineWidth: 2
+                }]}
+              tooltip={props => {
+                if (!props.display) return <></>
+                const timeString = new Date(props.time as number).toLocaleTimeString();
+                return <pre className="relative z-30 w-full bg-black/70 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                  {timeString}<br />
+                  <span className="text-[#f00]">{parseFloat(props.data![0].value.toString()).toFixed(2)}°C</span>
+                </pre>
+              }}
+            />
+            <div className="text-center">Temperature [{primData?.temperature || 0}℃] 🌡</div>
+          </div>
+          <div className="border border-white/50 rounded">
+            <SmoothieComponent responsive className="rounded"
+              height={window.innerWidth * 0.15}
+              series={
+                [{
+                  data: airSpeedTS,
+                  strokeStyle: { g: 255, b: 255 },
+                  lineWidth: 2
+                }]}
+              tooltip={props => {
+                if (!props.display) return <></>
+                const timeString = new Date(props.time as number).toLocaleTimeString();
+                return <pre className="relative z-30 w-full bg-black/70 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                  {timeString}<br />
+                  <span className="text-[#0ff]">{parseFloat(props.data![0].value.toString()).toFixed(2)} kmph</span>
+                </pre>
+              }}
+            />
+            <div className="text-center">Air Speed [{primData?.airSpeed || 0} kmph] 🌬</div>
+          </div>
+          <div className="border border-white/50 rounded">
+            <SmoothieComponent responsive className="rounded"
+              height={window.innerWidth * 0.15}
+              series={
+                [{
+                  data: pressureTS,
+                  strokeStyle: { r: 255, g: 255 },
+                  lineWidth: 2
+                }]}
+              tooltip={props => {
+                if (!props.display) return <></>
+                const timeString = new Date(props.time as number).toLocaleTimeString();
+                return <pre className="relative z-30 w-full bg-black/70 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                  {timeString}<br />
+                  <span className="text-[#ff0]">{parseFloat(props.data![0].value.toString()).toFixed(2)} Pascals</span>
+                </pre>
+              }}
+            />
+            <div className="text-center">Pressure [{primData?.pressure || 0} P] 💨</div>
+          </div>
+          <div className="border border-white/50 rounded">
+            <SmoothieComponent responsive className="rounded"
+              height={window.innerWidth * 0.15}
+              series={[
+                {
+                  data: altitudeTS,
+                  strokeStyle: { r: 255 },
+                  lineWidth: 2
+                },
+                {
+                  data: gpsAltitudeTS,
+                  strokeStyle: { g: 255 },
+                  lineWidth: 2
+                }
+              ]}
+              tooltip={props => {
+                if (!props.display) return <></>
+                const timeString = new Date(props.time as number).toLocaleTimeString();
+                return <pre className="relative z-30 w-full bg-black/60 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                  {timeString}<br />
+                  <span className="text-[#f00]">Pressure: {parseFloat(props.data![0].value.toString()).toFixed(2)}m</span><br />
+                  <span className="text-[#0f0]">GPS Alti: {parseFloat(props.data![1].value.toString()).toFixed(2)}m</span>
+                </pre>
+              }}
+            />
+            <div className="text-center">Altitude [{primData?.altitude || 0}m] 🗻</div>
+          </div>
 
+        </div>
       </div>
     </div>
     <div className=" h-full grid grid-rows-3 max-w-[25%]">
