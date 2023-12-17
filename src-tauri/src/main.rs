@@ -11,7 +11,7 @@ const USERNAME: &str = "2117";
 const PASSWORD: &str = "2117";
 
 const FPATH: &str = "../flight logs/out.csv";
-const SIMFILE: &str = "../soft_sim.csv";
+const SIMPFILE: &str = "../simp.txt";
 
 const BAUD_RATE: u32 = 9600;
 const CSV_HEAD:&str = "TEAM_ID, MISSION_TIME, PACKET_COUNT, MODE, STATE, ALTITUDE, AIR_SPEED, HS_DEPLOYED, PC_DEPLOYED, TEMPERATURE, VOLTAGE, PRESSURE, GPS_TIME, GPS_ALTITUDE, GPS_LATITUDE, GPS_LONGITUDE, GPS_SATS, TILT_X, TILT_Y, ROT_Z, CMD_ECHO";
@@ -71,19 +71,25 @@ fn set_port(
     let mut data = d.0.lock().unwrap();
     data.clear();
     state_port_name.clear();
-    if new_port_name == "SIMULATE" {
-        state_port_name.push_str("SIMULATE");
-        let simfile = std::fs::read_to_string(SIMFILE).expect("Unable to read file");
-        println!("SIMULATING PORT READING FROM FILE: {}", SIMFILE);
-        // println!("{}", simfile);
-        let mut sim_vars = sim.0.lock().unwrap();
-        sim_vars.clear();
-        for line in simfile.lines() {
-            sim_vars.push(line.to_owned());
-        }
-        sim_vars.remove(0);
+    if (new_port_name == "NONE") {
+        state_port_name.push_str("NONE");
+        *reload = true;
+        println!("port set: {}", state_port_name);
         return;
     }
+    // if new_port_name == "SIMULATE" {
+    //     state_port_name.push_str("SIMULATE");
+    //     let simfile = std::fs::read_to_string(SIMPFILE).expect("Unable to read file");
+    //     println!("SIMULATING PORT READING FROM FILE: {}", SIMPFILE);
+    //     // println!("{}", simfile);
+    //     let mut sim_vars = sim.0.lock().unwrap();
+    //     sim_vars.clear();
+    //     for line in simfile.lines() {
+    //         sim_vars.push(line.to_owned());
+    //     }
+    //     sim_vars.remove(0);
+    //     return;
+    // }
     let base = PathBuf::from(&new_port_name);
     state_port_name.push_str(&base.display().to_string());
     *reload = true;
@@ -97,23 +103,29 @@ fn set_port(
 #[tauri::command]
 fn read_serial(s: State<Data>, p: State<StatePortName>, sim: State<SimVars>) -> String {
     let port = p.0.lock().unwrap().clone();
-    if port == "SIMULATE" {
-        let mut sim_vars = sim.0.lock().unwrap();
+    // if port == "SIMULATE" {
+    //     let mut sim_vars = sim.0.lock().unwrap();
 
-        if sim_vars.len() > 1 {
-            let sim_data = sim_vars.remove(0);
-            sim_vars.push(sim_data.clone());
-            return sim_data.replace("\n", "").replace("\r", "");
-        }
-        return sim_vars[0].clone();
-    }
+    //     if sim_vars.len() > 1 {
+    //         let sim_data = sim_vars.remove(0);
+    //         sim_vars.push(sim_data.clone());
+    //         return sim_data.replace("\n", "").replace("\r", "");
+    //     }
+    //     return sim_vars[0].clone();
+    // }
     let data = s.0.lock().unwrap().clone();
     // println!("data_read_serial: {}", data.replace("\n", ""));
     return data.replace("\n", "").replace("\r", "");
 }
 
 #[tauri::command]
-fn write_serial(write_data: &str, w: State<CommandToWrite>) {
+fn write_serial(write_data: &str, w: State<CommandToWrite>, s: State<StatePortName>) {
+    // check is serial is connected
+    let state_port_name = s.0.lock().unwrap().clone();
+    if state_port_name.is_empty() || state_port_name == "NONE" {
+        println!("Serial port not set");
+        return;
+    }
     println!("write_serial: {}", write_data);
     let mut command_to_write = w.0.lock().unwrap();
     command_to_write.clear();
@@ -287,6 +299,9 @@ fn main() {
                                     *reload = false;
                                     first_run = false;
                                     break;
+                                }
+                                if state_port_name == "NONE" || state_port_name.is_empty() {
+                                    continue;
                                 }
                                 let avail_bytes = _port.bytes_to_read().unwrap();
                                 if avail_bytes > 0 {

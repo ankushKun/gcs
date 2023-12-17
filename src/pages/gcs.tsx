@@ -7,16 +7,22 @@ import "leaflet/dist/leaflet.css";
 import { Canvas } from "@react-three/fiber"
 import { Environment, OrbitControls } from "@react-three/drei"
 import reload from "../assets/reload.png";
-// import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
+// import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, LineChart, Line, Legend, ResponsiveContainer } from "recharts"
 import SmoothieComponent, { TimeSeries } from "react-smoothie";
 import { type RecvData } from "../types";
 import Model from "../assets/Dummysat.tsx"
+import { simpdata } from "../../simp.ts"
 
-const pre = `TERMINAL
-A
-B
-C
->>> D
+const teamId = 2117;
+
+const consoleInit =
+  `    > CONSOLE <
+
+>> Incoming telemetry
+<< Outgoing telemetry
+## Debug Message
+
+=====================
 `
 
 // function useScreenSize() {
@@ -31,23 +37,45 @@ C
 //   return size;
 // }
 
+const timesconfig = {
+  resetBounds: true,
+  resetBoundsInterval: 1000,
+}
+
 function GCS() {
   // const { width, height } = useScreenSize();
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
   const [selectedPort, setSelectedPort] = useState<string>("none");
   const [result, setResult] = useState<string>("");
   const [reading, setReading] = useState(false);
-  const [intrvl, setIntrvl] = useState<any>(0);
+  const [intrvl, setIntrvl] = useState<NodeJS.Timeout>();
   const [primData, setPrimData] = useState<RecvData>();
   const [telemetry, setTelemetry] = useState(true);
   const [mqttConnected, setMqttConnected] = useState(false);
-  const temperatureTS = new TimeSeries({});
-  const pressureTS = new TimeSeries({});
-  const altitudeTS = new TimeSeries({});
-  const airSpeedTS = new TimeSeries({});
-  const gpsAltitudeTS = new TimeSeries({});
+  const [simpInterval, setSimpInterval] = useState<NodeJS.Timeout>();
+  const [simpRunning, setSimpRunning] = useState(false);
+  const [consoleOut, setConsoleOut] = useState<string>(consoleInit);
+  const [command, setCommand] = useState<string>("");
+  const [temperatureTS, setTemperatureTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
+  const [pressureTS, setPressureTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
+  const [altitudeTS, setAltitudeTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
+  const [airSpeedTS, setAirSpeedTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
+  const [gpsAltitudeTS, setGpsAltitudeTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
 
   if (!window.__TAURI_IPC__) window.location.href = "/web";
+
+  async function writeSerial(data: string) {
+    await invoke("write_serial", { writeData: data });
+    setConsoleOut((p) => p + "\n<< " + data);
+  }
+
+  function clearGraphs() {
+    temperatureTS.clear();
+    pressureTS.clear();
+    altitudeTS.clear();
+    airSpeedTS.clear();
+    gpsAltitudeTS.clear();
+  }
 
   async function getPorts() {
     const a: string[] = await invoke("get_ports");
@@ -72,6 +100,7 @@ function GCS() {
 
   useEffect(() => {
     if (!result) return
+    console.log(result)
     const data = result.split(",,")
     const pd = data[0].split(",")
     const ed = data[1] ? data[1].split(",") : ["", ""]
@@ -79,15 +108,15 @@ function GCS() {
       teamID: parseInt(pd[0]),
       time: pd[1],
       packetCount: parseInt(pd[2]),
-      flightMode: pd[3] as "S" | "F",
+      flightMode: pd[3],
       state: pd[4],
       altitude: parseFloat(pd[5]),
       airSpeed: parseFloat(pd[6]),
-      hsDeployed: pd[7] as "P" | "N",
-      pcDeployed: pd[8] as "C" | "N",
+      hsDeployed: pd[7],
+      pcDeployed: pd[8],
       temperature: parseFloat(pd[9]),
-      pressure: parseFloat(pd[10]),
-      voltage: parseFloat(pd[11]),
+      voltage: parseFloat(pd[10]),
+      pressure: parseFloat(pd[11]),
       gpsTime: pd[12],
       gpsAltitude: parseFloat(pd[13]),
       gpsLatitude: parseFloat(pd[14]),
@@ -103,9 +132,23 @@ function GCS() {
     console.log(primaryData);
     // console.log(ed)
     if (ed[0]) {
-      toast(ed[0], { icon: "ℹ️" })
+      // toast(ed[0], { icon: "ℹ️" })
+      setConsoleOut(consoleOut + "\n## " + ed[0]);
       invoke("send_command", { telem: "ACK" });
     }
+    //////
+    var time = new Date().getTime();
+    temperatureTS.append(time, primaryData?.temperature!);
+    primaryData?.pressure != 0 && pressureTS.append(time, primaryData?.pressure!);
+    airSpeedTS.append(time, primaryData?.airSpeed!);
+    altitudeTS.append(time, primaryData?.altitude!);
+    gpsAltitudeTS.append(time, primaryData?.gpsAltitude!);
+
+    // temperatureTS.append(time, Math.random() * 10);
+    // pressureTS.append(time, Math.random());
+    // airSpeedTS.append(time, Math.random());
+    // altitudeTS.append(time, Math.random());
+    // gpsAltitudeTS.append(time, Math.random());
   }, [result]);
 
   useEffect(() => {
@@ -132,37 +175,44 @@ function GCS() {
     }
   }, [selectedPort]);
 
+  async function sendSimpDataPerSecond() {
+    const simpList = simpdata.split("\n").filter((e) => e.startsWith("CMD"));
+    console.log(simpList);
+    let i = 0;
+    if (simpRunning) {
+      clearInterval(simpInterval!);
+      setSimpRunning(false);
+      return
+    }
+    // clearGraphs();
+    const si = setInterval(() => {
+      if (i >= simpList.length) {
+        console.log("Stopped SIMP")
+        clearInterval(simpInterval);
+        setSimpRunning(false);
+        return;
+      }
+      console.log("writing simp: ", simpList[i]);
+      writeSerial(simpList[i]);
+      i++;
+    }, 1000)
+    setSimpRunning(true);
+    setSimpInterval(si);
+  }
+
   function setPort(port_name: string) {
     // if (port_name === "NONE") return;
+    // if (port_name === "SIMULATE") return sendSimpDataPerSecond();
+    clearInterval(simpInterval!);
+    setSimpRunning(false);
     invoke("set_port", { newPortName: port_name }).then(() => {
       setSelectedPort(port_name);
       setReading(true);
     });
   }
 
-
-  setInterval(() => {
-    var time = new Date().getTime();
-
-    // ts1.append(time, Math.random());
-    // ts2.append(time, Math.random());
-
-    // temperatureTS.append(time, primData?.temperature || 0);
-    // pressureTS.append(time, primData?.pressure || 0);
-    // airSpeedTS.append(time, primData?.airSpeed || 0);
-    // altitudeTS.append(time, primData?.altitude || 0);
-    // gpsAltitudeTS.append(time, primData?.gpsAltitude || 0);
-
-    temperatureTS.append(time, Math.random() * 10);
-    pressureTS.append(time, Math.random());
-    airSpeedTS.append(time, Math.random());
-    altitudeTS.append(time, Math.random());
-    gpsAltitudeTS.append(time, Math.random());
-
-  }, 1000)
-
   return <div className="flex w-screen h-screen justify-center">
-    <Toaster />
+    {/* <Toaster /> */}
     <div className="flex flex-col grow">
       <div className="p-1 flex justify-start items-center gap-2">
         <div id="battery" className="bg-black overflow-clip h-[30px] w-20 ring-1 ring-white/70 m-1 rounded relative z-0 flex items-center justify-center">
@@ -191,22 +241,36 @@ function GCS() {
           onChange={(e) => setPort(e.target.value)}
         >
           <option value="NONE">no port selected</option>
-          <option value="SIMULATE">simluate</option>
+          {/* <option value="SIMULATE">simluate</option> */}
           {serialPorts.map((port_name) => (
             <option key={port_name} value={port_name}>
               {port_name}
             </option>
           ))}
         </select>
-        <button onClick={connect_mqtt} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
+        <label htmlFor="sim-enable" >sim enable</label>
+        <input id="sim-enable" type="checkbox" onChange={(e) => {
+
+          e.target.checked && writeSerial(`CMD,${teamId},SIM,ENABLE`)
+        }} />
+        <label htmlFor="sim-activate" >sim activate</label>
+        <input id="sim-activate" type="checkbox" onChange={(e) => {
+          e.target.checked && writeSerial(`CMD,${teamId},SIM,ACTIVATE`)
+        }} />
+
+        <button onClick={sendSimpDataPerSecond} disabled={selectedPort == "none"} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
+          {simpRunning ? "SIMP ✅" : "SIMP"}
+        </button>
+        <button onClick={connect_mqtt} disabled={selectedPort == "none"} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
           {mqttConnected ? "MQTT ✅" : "Connect MQTT"}
         </button>
 
       </div>
       <div className="grow relative">
-        <div id="graphs" className="flex justify-evenly gap-2 p-2">
+        <div className="text-center text-white/80 text-xs">{result}</div>
+        <div className="flex gap-2 p-2 justify-center">
           <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded"
+            <SmoothieComponent responsive className="rounded" millisPerPixel={50}
               height={window.innerWidth * 0.15}
               series={
                 [{
@@ -226,7 +290,7 @@ function GCS() {
             <div className="text-center">Temperature [{primData?.temperature || 0}℃] 🌡</div>
           </div>
           <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded"
+            <SmoothieComponent responsive className="rounded" millisPerPixel={50}
               height={window.innerWidth * 0.15}
               series={
                 [{
@@ -246,8 +310,15 @@ function GCS() {
             <div className="text-center">Air Speed [{primData?.airSpeed || 0} kmph] 🌬</div>
           </div>
           <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded"
+            <SmoothieComponent responsive className="rounded" millisPerPixel={200} grid={
+              { strokeStyle: "rgba(255,255,255,0.1)" }
+            } maxValue={95000} minValue={85000} minValueScale={1.5} maxValueScale={1.5}
               height={window.innerWidth * 0.15}
+              scaleSmoothing={0.1}
+              interpolation="linear"
+              nonRealtimeData={false}
+              doNotSimplifyData
+              streamDelay={10}
               series={
                 [{
                   data: pressureTS,
@@ -266,7 +337,7 @@ function GCS() {
             <div className="text-center">Pressure [{primData?.pressure || 0} P] 💨</div>
           </div>
           <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded"
+            <SmoothieComponent responsive className="rounded" millisPerPixel={50}
               height={window.innerWidth * 0.15}
               series={[
                 {
@@ -323,16 +394,24 @@ function GCS() {
         </MapContainer>
 
       </div>
-      <div className="bg-black/60 flex flex-col text-justify font-extralight text-green-400 p-1 px-2 overflow-scroll w-full">
+      <div className="bg-black/60 flex flex-col-reverse text-justify font-extralight text-green-400 p-1 px-2 overflow-scroll w-full">
+        <input type="text" className="bg-black ring-1 ring-white/20 text-green-400 outline-none w-full" value={command}
+          onChange={(e) => {
+            e.stopPropagation();
+            setCommand(e.target.value);
+          }}
+          onKeyDownCapture={(e) => {
+            e.stopPropagation();
+            if (!command) return
+            if (e.key === "Enter") {
+              writeSerial(command);
+              setCommand("")
+            }
+          }}
+        />
         <pre className="grow">
-          {pre}
+          {consoleOut}
         </pre>
-        <input type="text" className="bg-black ring-1 ring-white/20 text-green-400 outline-none w-full" onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            invoke("write_serial", { writeData: e.currentTarget.value });
-            e.currentTarget.value = "";
-          }
-        }} />
       </div>
     </div>
   </div>
