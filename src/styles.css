@@ -5,10 +5,12 @@
 * {
   margin: 0px;
   padding: 0px;
+  -webkit-user-drag: none;
+  font-weight: 600;
 }
 
 html {
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.90);
-  color: whitesmoke;
+  background-color: whitesmoke;
+  color: black;
 }

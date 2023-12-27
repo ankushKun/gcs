@@ -1,19 +1,21 @@
 import { Suspense, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
-import toast, { Toaster } from "react-hot-toast";
-import Switch from "react-switch"
 import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
 import "leaflet/dist/leaflet.css";
-import { Canvas } from "@react-three/fiber"
-import { Environment, OrbitControls } from "@react-three/drei"
+// import { Canvas } from "@react-three/fiber"
+// import { Environment, OrbitControls } from "@react-three/drei"
 import reload from "../assets/reload.png";
 // import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, LineChart, Line, Legend, ResponsiveContainer } from "recharts"
 import SmoothieComponent, { TimeSeries } from "react-smoothie";
 import { type RecvData } from "../types";
-import Model from "../assets/Dummysat.tsx"
+// import { Model } from "../assets/Dummysat.tsx"
 import { simpdata } from "../../simp.ts"
+import logo from "../assets/logo.jpeg"
+import cu from "../assets/cu.png"
 
 const teamId = 2117;
+
+const millisppixel = 100;
 
 const consoleInit =
   `    > CONSOLE <
@@ -45,7 +47,7 @@ const timesconfig = {
 function GCS() {
   // const { width, height } = useScreenSize();
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
-  const [selectedPort, setSelectedPort] = useState<string>("none");
+  const [selectedPort, setSelectedPort] = useState<string>("NONE");
   const [result, setResult] = useState<string>("");
   const [reading, setReading] = useState(false);
   const [intrvl, setIntrvl] = useState<NodeJS.Timeout>();
@@ -99,8 +101,8 @@ function GCS() {
   }, []);
 
   useEffect(() => {
-    if (!result) return
     console.log(result)
+    if (!result) return
     const data = result.split(",,")
     const pd = data[0].split(",")
     const ed = data[1] ? data[1].split(",") : ["", ""]
@@ -166,8 +168,12 @@ function GCS() {
       setIntrvl(
         setInterval(() => {
           invoke("read_serial").then((e: any) => {
-            // console.log(e)
+            console.log(e)
             setResult(e.toString());
+          }).catch((e) => {
+            console.log(e)
+            setReading(false);
+            clearInterval(intrvl);
           });
         }, 1000),
       );
@@ -200,42 +206,32 @@ function GCS() {
     setSimpInterval(si);
   }
 
-  function setPort(port_name: string) {
+  async function setPort(port_name: string) {
     // if (port_name === "NONE") return;
     // if (port_name === "SIMULATE") return sendSimpDataPerSecond();
     clearInterval(simpInterval!);
     setSimpRunning(false);
-    invoke("set_port", { newPortName: port_name }).then(() => {
-      setSelectedPort(port_name);
-      setReading(true);
-    });
+    await invoke("set_port", { newPortName: port_name })
+    setSelectedPort(port_name);
+    setReading(true);
+    console.log("set port", port_name);
+
   }
 
-  return <div className="flex w-screen h-screen justify-center">
+  return <div className="grid grid-cols-3 w-screen h-screen justify-center">
     {/* <Toaster /> */}
-    <div className="flex flex-col grow">
+    <div className="flex flex-col col-span-2">
+      <div className="flex items-center justify-between bg-orange-500 py-1">
+        <img src={logo} className="h-14 opacity-90" />
+        <div className="text-4xl font-bold text-center text-white/90">GROUND CONTROL STATION</div>
+        <img src={cu} className="h-14 " />
+      </div>
       <div className="p-1 flex justify-start items-center gap-2">
-        <div id="battery" className="bg-black overflow-clip h-[30px] w-20 ring-1 ring-white/70 m-1 rounded relative z-0 flex items-center justify-center">
+        <div id="battery" className="bg-black/5  h-[30px] w-20 ring-1 ring-black/70 m-1 rounded relative z-0 flex items-center justify-center">
           <div className="font-bold">12.0V</div>
-          <div className="bg-green-600 rounded h-[30px] w-[90%] absolute left-0 top-0 -z-10"></div>
-          <div className="absolute -right-1.5 top-2 bg-white h-[13px] w-1.5 rounded-r z-0"></div>
+          <div className="bg-green-400 rounded h-[30px] w-[50%] absolute left-0 top-0 -z-10"></div>
+          <div className="absolute -right-1.5 bottom-2.5 bg-black h-[13px] w-1.5 rounded-r z-0"></div>
         </div>
-        <label htmlFor="telemetry" className="text-white/80 flex items-center gap-1 ml-2 text-xl ring-1 rounded-full p-0.5 pl-1 ring-white/50">
-          CX
-          <Switch checked={telemetry} defaultChecked onChange={(e) => {
-            invoke("send_command", { telem: `CX,${e ? "ON" : "OFF"}` });
-            setTelemetry(e);
-          }} />
-        </label>
-        <div className="grow"></div>
-        <button className="" onClick={() => getPorts()}>
-          <img
-            src={reload}
-            className="active:rotate-90 invert"
-            width={16}
-            height={16}
-          />
-        </button>
         <select
           className="text-black bg-green-400 h-fit py-1"
           onChange={(e) => setPort(e.target.value)}
@@ -248,29 +244,46 @@ function GCS() {
             </option>
           ))}
         </select>
-        <label htmlFor="sim-enable" >sim enable</label>
+        <button className="" onClick={() => getPorts()}>
+          <img
+            src={reload}
+            className="active:rotate-90"
+            width={16}
+            height={16}
+          />
+        </button>
+        <label htmlFor="cx">CX</label>
+        <input type="checkbox" id="cx" checked={telemetry} onChange={(e) => {
+          invoke("send_command", { telem: `CX,${e.target.checked ? "ON" : "OFF"}` });
+          setTelemetry(e.target.checked);
+        }} />
+        <div className="grow"></div>
+        <label htmlFor="sim-enable" >SIMP ENABLE</label>
         <input id="sim-enable" type="checkbox" onChange={(e) => {
 
           e.target.checked && writeSerial(`CMD,${teamId},SIM,ENABLE`)
         }} />
-        <label htmlFor="sim-activate" >sim activate</label>
+        <label htmlFor="sim-activate" >SIMP ACTIVATE</label>
         <input id="sim-activate" type="checkbox" onChange={(e) => {
           e.target.checked && writeSerial(`CMD,${teamId},SIM,ACTIVATE`)
         }} />
 
         <button onClick={sendSimpDataPerSecond} disabled={selectedPort == "none"} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
-          {simpRunning ? "SIMP ✅" : "SIMP"}
+          {simpRunning ? "SIM ✅" : "START SIM"}
         </button>
         <button onClick={connect_mqtt} disabled={selectedPort == "none"} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
           {mqttConnected ? "MQTT ✅" : "Connect MQTT"}
         </button>
 
       </div>
-      <div className="grow relative">
-        <div className="text-center text-white/80 text-xs">{result}</div>
-        <div className="flex gap-2 p-2 justify-center">
-          <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded" millisPerPixel={50}
+      <div className="grow flex flex-col relative">
+        <div className="text-center text-black text-xs">{result}</div>
+        <div className="grid grid-cols-2 gap-2 p-2 justify-evenly grow">
+          <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
+              { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
+            } labels={{ fillStyle: "rgb(0,0,0)" }}
+              minValueScale={1.5} maxValueScale={1.5} minValue={0} maxValue={50}
               height={window.innerWidth * 0.15}
               series={
                 [{
@@ -281,7 +294,7 @@ function GCS() {
               tooltip={props => {
                 if (!props.display) return <></>
                 const timeString = new Date(props.time as number).toLocaleTimeString();
-                return <pre className="relative z-30 w-full bg-black/70 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                return <pre className="relative z-30 w-full bg-white text-black p-1 ring-1 ring-black/50 ml-3 rounded text-center">
                   {timeString}<br />
                   <span className="text-[#f00]">{parseFloat(props.data![0].value.toString()).toFixed(2)}°C</span>
                 </pre>
@@ -289,30 +302,34 @@ function GCS() {
             />
             <div className="text-center">Temperature [{primData?.temperature || 0}℃] 🌡</div>
           </div>
-          <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded" millisPerPixel={50}
+          <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
+              { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
+            } labels={{ fillStyle: "rgb(0,0,0)" }}
+              minValueScale={1.5} maxValueScale={1.5}
               height={window.innerWidth * 0.15}
               series={
                 [{
                   data: airSpeedTS,
-                  strokeStyle: { g: 255, b: 255 },
+                  strokeStyle: { g: 136, b: 136 },
                   lineWidth: 2
                 }]}
               tooltip={props => {
                 if (!props.display) return <></>
                 const timeString = new Date(props.time as number).toLocaleTimeString();
-                return <pre className="relative z-30 w-full bg-black/70 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                return <pre className="relative z-30 w-full bg-white text-black p-1 ring-1 ring-black/50 ml-3 rounded text-center">
                   {timeString}<br />
-                  <span className="text-[#0ff]">{parseFloat(props.data![0].value.toString()).toFixed(2)} kmph</span>
+                  <span className="text-[#088]">{parseFloat(props.data![0].value.toString()).toFixed(2)} kmph</span>
                 </pre>
               }}
             />
             <div className="text-center">Air Speed [{primData?.airSpeed || 0} kmph] 🌬</div>
           </div>
-          <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded" millisPerPixel={200} grid={
-              { strokeStyle: "rgba(255,255,255,0.1)" }
-            } maxValue={95000} minValue={85000} minValueScale={1.5} maxValueScale={1.5}
+          <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
+              { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
+            } labels={{ fillStyle: "rgb(0,0,0)" }}
+              maxValue={95000} minValue={85000} minValueScale={1.5} maxValueScale={1.5}
               height={window.innerWidth * 0.15}
               scaleSmoothing={0.1}
               interpolation="linear"
@@ -322,22 +339,25 @@ function GCS() {
               series={
                 [{
                   data: pressureTS,
-                  strokeStyle: { r: 255, g: 255 },
+                  strokeStyle: { r: 153, g: 153 },
                   lineWidth: 2
                 }]}
               tooltip={props => {
                 if (!props.display) return <></>
                 const timeString = new Date(props.time as number).toLocaleTimeString();
-                return <pre className="relative z-30 w-full bg-black/70 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                return <pre className="relative z-30 w-full bg-white text-black p-1 ring-1 ring-black/50 ml-3 rounded text-center">
                   {timeString}<br />
-                  <span className="text-[#ff0]">{parseFloat(props.data![0].value.toString()).toFixed(2)} Pascals</span>
+                  <span className="text-[#660]">{parseFloat(props.data![0].value.toString()).toFixed(2)} Pascals</span>
                 </pre>
               }}
             />
             <div className="text-center">Pressure [{primData?.pressure || 0} P] 💨</div>
           </div>
-          <div className="border border-white/50 rounded">
-            <SmoothieComponent responsive className="rounded" millisPerPixel={50}
+          <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
+              { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
+            } labels={{ fillStyle: "rgb(0,0,0)" }} minValue={-200} maxValue={1000}
+              minValueScale={1.5} maxValueScale={1.5}
               height={window.innerWidth * 0.15}
               series={[
                 {
@@ -347,29 +367,46 @@ function GCS() {
                 },
                 {
                   data: gpsAltitudeTS,
-                  strokeStyle: { g: 255 },
+                  strokeStyle: { g: 153 },
                   lineWidth: 2
                 }
               ]}
               tooltip={props => {
                 if (!props.display) return <></>
                 const timeString = new Date(props.time as number).toLocaleTimeString();
-                return <pre className="relative z-30 w-full bg-black/60 text-white/80 p-1 ring-1 ring-white/20 rounded text-center">
+                return <pre className="relative z-30 w-full bg-white text-black p-1 ring-1 ring-black/50 ml-3 rounded text-center">
                   {timeString}<br />
-                  <span className="text-[#f00]">Pressure: {parseFloat(props.data![0].value.toString()).toFixed(2)}m</span><br />
-                  <span className="text-[#0f0]">GPS Alti: {parseFloat(props.data![1].value.toString()).toFixed(2)}m</span>
+                  <span className="text-[#f00]">Altitude: {parseFloat(props.data![0].value.toString()).toFixed(2)}m</span><br />
+                  <span className="text-[#090]">GPS Alti: {parseFloat(props.data![1].value.toString()).toFixed(2)}m</span>
                 </pre>
               }}
             />
             <div className="text-center">Altitude [{primData?.altitude || 0}m] 🗻</div>
           </div>
-
+          <div className="border border-black/50 rounded bg-black/5 min-h-[200px]">
+            live feed
+          </div>
+          <div className="border border-black/50 rounded bg-black/5 p-2 flex flex-col justify-center">
+            <pre className="text-lg text-center mb-2">SYSTEM STATUS</pre>
+            <div className="flex justify-center items-center gap-10 grow">
+              <pre>
+                🟢 IMU<br />
+                🔴 Altimeter<br />
+                🔴 GPS<br />
+              </pre>
+              <pre>
+                🟢 Telemetry<br />
+                🔴 Airspeed<br />
+                🔴 Camera<br />
+              </pre>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div className=" h-full grid grid-rows-3 max-w-[25%]">
+    <div className="h-screen grid grid-rows-3 max-w-[33%] border-l border-black/50">
       <div className="">
-        <Canvas
+        {/* <Canvas
           camera={{ position: [0, 0, 16], fov: 18 }}
           style={{
             backgroundColor: "transparent",
@@ -379,8 +416,8 @@ function GCS() {
             <Model rotation={[Math.PI / 4, Math.PI / 4, 0]} />
           </Suspense>
           <OrbitControls enableZoom={false} />
-        </Canvas>
-        <div className="w-full text-center relative -top-6">PARACHUTE DEPLOYED</div>
+        </Canvas> */}
+        <div className="w-full text-center">LAUNCH_WAIT</div>
       </div>
       <div className="bg-black/10 relative overflow-clip h-full" id="map">
         <MapContainer center={[30.76861111, 76.57388889]} zoom={17} scrollWheelZoom={false} className="h-full">
@@ -394,8 +431,8 @@ function GCS() {
         </MapContainer>
 
       </div>
-      <div className="bg-black/60 flex flex-col-reverse text-justify font-extralight text-green-400 p-1 px-2 overflow-scroll w-full">
-        <input type="text" className="bg-black ring-1 ring-white/20 text-green-400 outline-none w-full" value={command}
+      <div className="bg-white flex flex-col-reverse text-justify font-bold text-green-700 w-full">
+        <input type="text" className="bg-black/20 ring-1 ring-white/20 text-green-700 outline-none w-full px-2" value={command}
           onChange={(e) => {
             e.stopPropagation();
             setCommand(e.target.value);
@@ -409,7 +446,7 @@ function GCS() {
             }
           }}
         />
-        <pre className="grow">
+        <pre className="grow p-1 px-2 overflow-scroll flex flex-col-reverse">
           {consoleOut}
         </pre>
       </div>

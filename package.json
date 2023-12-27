@@ -10,8 +10,6 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@react-three/drei": "^9.92.1",
-    "@react-three/fiber": "^8.15.12",
     "@tauri-apps/api": "^1.4.0",
     "firebase": "^10.3.0",
     "localforage": "^1.10.0",
@@ -22,11 +20,8 @@
     "react-leaflet": "^4.2.1",
     "react-router-dom": "^6.15.0",
     "react-smoothie": "^0.13.1",
-    "react-switch": "^7.0.0",
     "recharts": "^2.8.0",
-    "sort-by": "^1.2.0",
-    "tauri-plugin-serialport-api": "github:lzhida/tauri-plugin-serialport#v0.1.0",
-    "three": "^0.159.0"
+    "sort-by": "^1.2.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.4.0",

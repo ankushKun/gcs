@@ -64,14 +64,14 @@ fn set_port(
     s: State<StatePortName>,
     r: State<ReloadPort>,
     d: State<Data>,
-    sim: State<SimVars>,
+    // sim: State<SimVars>,
 ) {
     let mut state_port_name = s.0.lock().unwrap();
     let mut reload = r.0.lock().unwrap();
     let mut data = d.0.lock().unwrap();
     data.clear();
     state_port_name.clear();
-    if (new_port_name == "NONE") {
+    if new_port_name == "NONE" {
         state_port_name.push_str("NONE");
         *reload = true;
         println!("port set: {}", state_port_name);
@@ -101,8 +101,11 @@ fn set_port(
 }
 
 #[tauri::command]
-fn read_serial(s: State<Data>, p: State<StatePortName>, sim: State<SimVars>) -> String {
-    let port = p.0.lock().unwrap().clone();
+fn read_serial(
+    s: State<Data>,
+    // p: State<StatePortName>, sim: State<SimVars>
+) -> String {
+    // let port = p.0.lock().unwrap().clone();
     // if port == "SIMULATE" {
     //     let mut sim_vars = sim.0.lock().unwrap();
 
@@ -114,7 +117,7 @@ fn read_serial(s: State<Data>, p: State<StatePortName>, sim: State<SimVars>) -> 
     //     return sim_vars[0].clone();
     // }
     let data = s.0.lock().unwrap().clone();
-    // println!("data_read_serial: {}", data.replace("\n", ""));
+    println!("data_read_serial: {}", data.replace("\n", ""));
     return data.replace("\n", "").replace("\r", "");
 }
 
@@ -274,7 +277,22 @@ fn main() {
                     std::thread::sleep(Duration::from_millis(3500));
                     match port {
                         Ok(mut _port) => {
-                            // println!("port opened");
+                            println!("port exists");
+                            match _port.write_data_terminal_ready(true) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    println!("port not opened");
+                                    break;
+                                }
+                            }
+                            match _port.write_request_to_send(true) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    println!("port not opened");
+                                    break;
+                                }
+                            }
+                            println!("okay");
                             loop {
                                 let binding = app_handle.state::<ReloadPort>();
                                 let mut reload = binding.0.lock().unwrap();

@@ -35,7 +35,7 @@
     },
     "windows": [
       {
-        "fullscreen": false,
+        "fullscreen": true,
         "resizable": true,
         "title": "Ingenuity GCS",
         "width": 800,
