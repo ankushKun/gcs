@@ -10,7 +10,8 @@ const PORT: u32 = 1883;
 const USERNAME: &str = "2117";
 const PASSWORD: &str = "2117";
 
-const FPATH: &str = "../flight logs/out.csv";
+const FPATH: &str = "../flight logs/";
+const FNAME: &str = "out.csv";
 const SIMPFILE: &str = "../simp.txt";
 
 const BAUD_RATE: u32 = 9600;
@@ -169,9 +170,13 @@ fn get_ports() -> Vec<String> {
 }
 
 fn new_file() {
-    if PathBuf::from(FPATH).exists() {
+    let outfile: &str = &("".to_owned() + FPATH + "/" + FNAME);
+    if !PathBuf::from(FPATH).exists() {
+        std::fs::create_dir(PathBuf::from(FPATH)).expect("Unable to create directory");
+    }
+    if PathBuf::from(outfile).exists() {
         std::fs::rename(
-            FPATH,
+            outfile,
             Local::now()
                 .format("../flight logs/%Y-%m-%d_%H:%M:%S")
                 .to_string()
@@ -179,7 +184,8 @@ fn new_file() {
         )
         .expect("Unable to rename file");
     }
-    let mut f = File::create(FPATH).expect("Unable to create file");
+
+    let mut f = File::create(outfile).expect("Unable to create file");
     f.write(CSV_HEAD.as_bytes()).expect("Unable to write data");
 }
 
