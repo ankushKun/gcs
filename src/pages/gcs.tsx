@@ -12,6 +12,8 @@ import { type RecvData } from "../types";
 import { simpdata } from "../../simp.ts"
 import logo from "../assets/logo.jpeg"
 import cu from "../assets/cu.png"
+import rocket from "../assets/rocket.svg"
+import sat from "../assets/sat.svg"
 
 const teamId = 2117;
 
@@ -64,7 +66,7 @@ function GCS() {
   const [airSpeedTS, setAirSpeedTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
   const [gpsAltitudeTS, setGpsAltitudeTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
 
-  if (!window.__TAURI_IPC__) window.location.href = "/web";
+  // if (!window.__TAURI_IPC__) window.location.href = "/web";
 
   async function writeSerial(data: string) {
     await invoke("write_serial", { writeData: data });
@@ -354,33 +356,40 @@ function GCS() {
             <div className="text-center">Pressure [{primData?.pressure || 0} P] 💨</div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 h-fit">
-            <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
-              { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
-            } labels={{ fillStyle: "rgb(0,0,0)" }} minValue={-200} maxValue={1000}
-              minValueScale={1.5} maxValueScale={1.5}
-              height={window.innerWidth * 0.15}
-              series={[
-                {
-                  data: altitudeTS,
-                  strokeStyle: { r: 255 },
-                  lineWidth: 2
-                },
-                {
-                  data: gpsAltitudeTS,
-                  strokeStyle: { g: 153 },
-                  lineWidth: 2
-                }
-              ]}
-              tooltip={props => {
-                if (!props.display) return <></>
-                const timeString = new Date(props.time as number).toLocaleTimeString();
-                return <pre className="relative z-30 w-full bg-white text-black p-1 ring-1 ring-black/50 ml-3 rounded text-center">
-                  {timeString}<br />
-                  <span className="text-[#f00]">Altitude: {parseFloat(props.data![0].value.toString()).toFixed(2)}m</span><br />
-                  <span className="text-[#090]">GPS Alti: {parseFloat(props.data![1].value.toString()).toFixed(2)}m</span>
-                </pre>
-              }}
-            />
+            <div className="flex min-w-full w-full">
+              <div className="grow">
+                <SmoothieComponent responsive className="rounded grow min-w-[100%]" millisPerPixel={millisppixel} grid={
+                  { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
+                } labels={{ fillStyle: "rgb(0,0,0)" }} minValue={-200} maxValue={1000}
+                  minValueScale={1.5} maxValueScale={1.5}
+                  height={window.innerWidth * 0.15}
+                  series={[
+                    {
+                      data: altitudeTS,
+                      strokeStyle: { r: 255 },
+                      lineWidth: 2
+                    },
+                    {
+                      data: gpsAltitudeTS,
+                      strokeStyle: { g: 153 },
+                      lineWidth: 2
+                    }
+                  ]}
+                  tooltip={props => {
+                    if (!props.display) return <></>
+                    const timeString = new Date(props.time as number).toLocaleTimeString();
+                    return <pre className="relative z-30 w-full bg-white text-black p-1 ring-1 ring-black/50 ml-3 rounded text-center">
+                      {timeString}<br />
+                      <span className="text-[#f00]">Altitude: {parseFloat(props.data![0].value.toString()).toFixed(2)}m</span><br />
+                      <span className="text-[#090]">GPS Alti: {parseFloat(props.data![1].value.toString()).toFixed(2)}m</span>
+                    </pre>
+                  }}
+                />
+              </div>
+              <div className="w-5 bg-gradient-to-t from-amber-600/50 to-blue-300 relative flex flex-col items-center rounded-r">
+                <img src={rocket} className="w-[50px] min-w-[50px] absolute bottom-10" />
+              </div>
+            </div>
             <div className="text-center">Altitude [{primData?.altitude || 0}m] 🗻</div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 min-h-[200px]">
