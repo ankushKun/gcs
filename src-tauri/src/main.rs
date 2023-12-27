@@ -10,9 +10,9 @@ const PORT: u32 = 1883;
 const USERNAME: &str = "2117";
 const PASSWORD: &str = "2117";
 
-const FPATH: &str = "../flight logs/";
+const FOLDER: &str = "vayu";
+const FPATH: &str = "flight-logs";
 const FNAME: &str = "out.csv";
-const SIMPFILE: &str = "../simp.txt";
 
 const BAUD_RATE: u32 = 9600;
 const CSV_HEAD:&str = "TEAM_ID, MISSION_TIME, PACKET_COUNT, MODE, STATE, ALTITUDE, AIR_SPEED, HS_DEPLOYED, PC_DEPLOYED, TEMPERATURE, VOLTAGE, PRESSURE, GPS_TIME, GPS_ALTITUDE, GPS_LATITUDE, GPS_LONGITUDE, GPS_SATS, TILT_X, TILT_Y, ROT_Z, CMD_ECHO";
@@ -57,6 +57,7 @@ lazy_static! {
         .client_id(TOPIC)
         .create_client()
         .unwrap();
+    static ref HOME: PathBuf = home::home_dir().unwrap();
 }
 
 #[tauri::command]
@@ -170,22 +171,43 @@ fn get_ports() -> Vec<String> {
 }
 
 fn new_file() {
-    let outfile: &str = &("".to_owned() + FPATH + "/" + FNAME);
-    if !PathBuf::from(FPATH).exists() {
-        std::fs::create_dir(PathBuf::from(FPATH)).expect("Unable to create directory");
+    // let outfile: &str = &("".to_owned() + FPATH + "/" + FNAME);
+    // if !PathBuf::from(FPATH).exists() {
+    //     std::fs::create_dir(PathBuf::from(FPATH)).expect("Unable to create directory");
+    // }
+    // if PathBuf::from(outfile).exists() {
+    //     std::fs::rename(
+    //         outfile,
+    //         Local::now()
+    //             .format((FPATH.to_owned() + "%Y-%m-%d_%H:%M:%S").as_str())
+    //             .to_string()
+    //             + ".bak.csv",
+    //     )
+    //     .expect("Unable to rename file");
+    // }
+
+    // let mut f = File::create(outfile).expect("Unable to create file");
+    // f.write(CSV_HEAD.as_bytes()).expect("Unable to write data");
+
+    if !HOME.join(FOLDER).exists() {
+        std::fs::create_dir(HOME.join(FOLDER)).expect("Unable to create directory");
     }
-    if PathBuf::from(outfile).exists() {
+    if !HOME.join(FOLDER).join(FPATH).exists() {
+        std::fs::create_dir(HOME.join(FOLDER).join(FPATH)).expect("Unable to create directory");
+    }
+    let outfile = HOME.join(FOLDER).join(FPATH).join(FNAME);
+    if PathBuf::from(&outfile).exists() {
         std::fs::rename(
-            outfile,
+            &outfile,
             Local::now()
-                .format("../flight logs/%Y-%m-%d_%H:%M:%S")
+                .format((FPATH.to_owned() + "%Y-%m-%d_%H:%M:%S").as_str())
                 .to_string()
                 + ".bak.csv",
         )
         .expect("Unable to rename file");
     }
 
-    let mut f = File::create(outfile).expect("Unable to create file");
+    let mut f = File::create(&outfile).expect("Unable to create file");
     f.write(CSV_HEAD.as_bytes()).expect("Unable to write data");
 }
 

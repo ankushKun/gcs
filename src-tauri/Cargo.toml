@@ -23,6 +23,7 @@ futures = "0.3"
 futures-timer = "3.0"
 chrono = "0.4.31"
 lazy_static = "1.4.0"
+home = "0.5.9"
 
 [dependencies.tauri-plugin-serialport]
 git = "https://github.com/lzhida/tauri-plugin-serialport"
