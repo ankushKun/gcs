@@ -200,7 +200,7 @@ fn new_file() {
         std::fs::rename(
             &outfile,
             Local::now()
-                .format((FPATH.to_owned() + "%Y-%m-%d_%H:%M:%S").as_str())
+                .format((outfile.to_str().unwrap().to_owned() + "%Y-%m-%d_%H:%M:%S").as_str())
                 .to_string()
                 + ".bak.csv",
         )
@@ -215,7 +215,7 @@ fn write_data(data: &str) {
     let mut file = OpenOptions::new()
         .write(true)
         .append(true)
-        .open(FPATH)
+        .open(HOME.join(FOLDER).join(FPATH).join(FNAME))
         .expect("open failed");
     file.write(("\n".to_owned() + data).as_bytes())
         .expect("write failed");
