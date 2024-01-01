@@ -2,13 +2,13 @@ import { Suspense, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
 import "leaflet/dist/leaflet.css";
-// import { Canvas } from "@react-three/fiber"
-// import { Environment, OrbitControls } from "@react-three/drei"
+import { Canvas } from "@react-three/fiber"
+import { Environment, OrbitControls } from "@react-three/drei"
 import reload from "../assets/reload.png";
 // import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, LineChart, Line, Legend, ResponsiveContainer } from "recharts"
 import SmoothieComponent, { TimeSeries } from "react-smoothie";
 import { type RecvData } from "../types";
-// import { Model } from "../assets/Dummysat.tsx"
+import { Model } from "../Cansat.tsx"
 import { simpdata } from "../../simp.ts"
 import logo from "../assets/logo.jpeg"
 import cu from "../assets/cu.png"
@@ -28,6 +28,19 @@ const consoleInit =
 
 =====================
 `
+
+function generateLightPositions() {
+  let combinations = [];
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      for (let k = -1; k <= 1; k++) {
+        combinations.push([i, j, k]);
+      }
+    }
+  }
+  return combinations;
+}
+
 
 // function useScreenSize() {
 //   const [size, setSize] = useState<{ width: number, height: number }>({ width: window.innerWidth, height: window.innerHeight });
@@ -67,6 +80,8 @@ function GCS() {
   const [gpsAltitudeTS, setGpsAltitudeTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
 
   // if (!window.__TAURI_IPC__) window.location.href = "/web";
+  
+  const lightPositions = generateLightPositions()
 
   async function writeSerial(data: string) {
     await invoke("write_serial", { writeData: data });
@@ -386,14 +401,16 @@ function GCS() {
                   }}
                 />
               </div>
-              <div className="w-5 bg-gradient-to-t from-amber-600/50 to-blue-300 relative flex flex-col items-center rounded-r">
-                <img src={rocket} className="w-[50px] min-w-[50px] absolute bottom-10" />
-              </div>
+              {/* <div className="w-5 bg-gradient-to-t from-amber-600/50 to-blue-300 relative flex flex-col items-center rounded-r"> */}
+              {/*   <img src={rocket} className="w-[50px] min-w-[50px] absolute bottom-10" /> */}
+              {/* </div> */}
             </div>
             <div className="text-center">Altitude [{primData?.altitude || 0}m] 🗻</div>
           </div>
-          <div className="border border-black/50 rounded bg-black/5 min-h-[200px]">
-            live feed
+          <div className="border border-black/50 rounded bg-black/5 min-h-[200px] p-1">
+            <div className="bg-black/60 text-white h-full text-center rounded">
+              Live Feed
+            </div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 p-2 flex flex-col justify-center">
             <pre className="text-lg text-center mb-2">SYSTEM STATUS</pre>
@@ -414,21 +431,21 @@ function GCS() {
       </div>
     </div>
     <div className="h-screen grid grid-rows-3 max-w-[33%] border-l border-black/50">
-      <div className="">
-        {/* <Canvas
-          camera={{ position: [0, 0, 16], fov: 18 }}
-          style={{
-            backgroundColor: "transparent",
-          }}>
-          <Environment preset="studio" />
-          <Suspense fallback={null}>
-            <Model rotation={[Math.PI / 4, Math.PI / 4, 0]} />
+      <div className="flex flex-col">
+        <Canvas camera={{ position: [3, 2, 0] }}>
+          <OrbitControls autoRotate enableZoom={false} enablePan={false} enableRotate />
+          {
+            lightPositions.map((position, index) => (
+              <directionalLight key={index} position={position} intensity={0.25} />
+            ))
+          }
+          <Suspense>
+            <Model />
           </Suspense>
-          <OrbitControls enableZoom={false} />
-        </Canvas> */}
-        <div className="w-full text-center">LAUNCH_WAIT</div>
+        </Canvas>
+        <div className="w-full text-center border-t border-black/20">LAUNCH_WAIT</div>
       </div>
-      <div className="bg-black/10 relative overflow-clip h-full" id="map">
+      <div className="bg-black/10 relative overflow-clip h-full border-t border-black/20" id="map">
         <MapContainer center={[30.76861111, 76.57388889]} zoom={17} scrollWheelZoom={false} className="h-full">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
@@ -440,7 +457,7 @@ function GCS() {
         </MapContainer>
 
       </div>
-      <div className="bg-white flex flex-col-reverse text-justify font-bold text-green-700 w-full">
+      <div className="bg-white flex flex-col-reverse text-justify font-bold text-green-700 w-full border-t border-black/30">
         <input type="text" className="bg-black/20 ring-1 ring-white/20 text-green-700 outline-none w-full px-2" value={command}
           onChange={(e) => {
             e.stopPropagation();
