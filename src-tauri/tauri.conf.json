@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "Ingenuity GCS",
+    "productName": "Vayu GCS",
     "version": "0.0.1"
   },
   "tauri": {
@@ -21,7 +21,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.ingenuity.gcs",
+      "identifier": "com.vayu.gcs",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

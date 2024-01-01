@@ -8,6 +8,10 @@ import React, { useRef } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { GLTF } from 'three-stdlib'
 
+interface GLTFAction extends THREE.AnimationClip {
+ name: any;
+}
+
 type GLTFResult = GLTF & {
   nodes: {
     body: THREE.Mesh
