@@ -432,15 +432,15 @@ function GCS() {
     </div>
     <div className="h-screen grid grid-rows-3 max-w-[33%] border-l border-black/50">
       <div className="flex flex-col">
-        <Canvas camera={{ position: [3, 2, 0] }}>
-          <OrbitControls autoRotate enableZoom={false} enablePan={false} enableRotate />
+        <Canvas camera={{ position: [3, 2, 0], zoom:1.3 }} >
+          <OrbitControls enableZoom enablePan={false} enableRotate autoRotate />
           {
             lightPositions.map((position, index) => (
               <directionalLight key={index} position={position} intensity={0.25} />
             ))
           }
           <Suspense>
-            <Model />
+            <Model rotation={[Math.PI/18,0,0]} />
           </Suspense>
         </Canvas>
         <div className="w-full text-center border-t border-black/20">LAUNCH_WAIT</div>
@@ -452,7 +452,7 @@ function GCS() {
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
           <CircleMarker center={[30.76861111, 76.57388889]} radius={3} color="red" >
-            <Popup>hi</Popup>
+            <Popup>Vayu Cansat</Popup>
           </CircleMarker>
         </MapContainer>
 
