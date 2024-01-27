@@ -124,26 +124,26 @@ function GCS() {
     const pd = data[0].split(",")
     const ed = data[1] ? data[1].split(",") : ["", ""]
     const primaryData: RecvData = {
-      teamID: parseInt(pd[0]),
+      teamID: parseInt(pd[0]) ? parseInt(pd[0]) : -1,
       time: pd[1],
-      packetCount: parseInt(pd[2]),
+      packetCount: parseInt(pd[2]) ? parseInt(pd[2]) : -1,
       flightMode: pd[3],
       state: pd[4],
-      altitude: parseFloat(pd[5]),
-      airSpeed: parseFloat(pd[6]),
+      altitude: parseFloat(pd[5]) ? parseFloat(pd[5]) : -1,
+      airSpeed: parseFloat(pd[6]) ? parseFloat(pd[6]) : -1,
       hsDeployed: pd[7],
       pcDeployed: pd[8],
-      temperature: parseFloat(pd[9]),
-      voltage: parseFloat(pd[10]),
-      pressure: parseFloat(pd[11]),
+      temperature: parseFloat(pd[9]) ? parseFloat(pd[9]) : -1,
+      voltage: parseFloat(pd[10]) ? parseFloat(pd[10]) : -1,
+      pressure: parseFloat(pd[11]) ? parseFloat(pd[11]) : -1,
       gpsTime: pd[12],
-      gpsAltitude: parseFloat(pd[13]),
-      gpsLatitude: parseFloat(pd[14]),
-      gpsLongitude: parseFloat(pd[15]),
-      gpsSats: parseInt(pd[16]),
-      tiltX: parseFloat(pd[17]),
-      tiltY: parseFloat(pd[18]),
-      rotZ: parseFloat(pd[19]),
+      gpsAltitude: parseFloat(pd[13]) ? parseFloat(pd[13]) : -1,
+      gpsLatitude: parseFloat(pd[14]) ? parseFloat(pd[14]) : -1,
+      gpsLongitude: parseFloat(pd[15]) ? parseFloat(pd[15]) : -1,
+      gpsSats: parseInt(pd[16]) ? parseInt(pd[16]) : -1,
+      tiltX: parseFloat(pd[17]) ? parseFloat(pd[17]) : -1,
+      tiltY: parseFloat(pd[18]) ? parseFloat(pd[18]) : -1,
+      rotZ: parseFloat(pd[19]) ? parseFloat(pd[19]) : -1,
       cmdEcho: pd[20],
       debugMsg: ed[0]
     };
@@ -346,7 +346,7 @@ function GCS() {
             <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
               { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
             } labels={{ fillStyle: "rgb(0,0,0)" }}
-              maxValue={95000} minValue={85000} minValueScale={1.5} maxValueScale={1.5}
+              maxValue={100000} minValue={85000} minValueScale={1.5} maxValueScale={1.5}
               height={window.innerWidth * 0.15}
               scaleSmoothing={0.1}
               interpolation="linear"
