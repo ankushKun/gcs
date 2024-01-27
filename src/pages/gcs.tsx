@@ -10,7 +10,7 @@ import SmoothieComponent, { TimeSeries } from "react-smoothie";
 import { type RecvData } from "../types";
 import { Model } from "../Cansat.tsx"
 import { simpdata } from "../../simp.ts"
-import logo from "../assets/logo.jpeg"
+import logo from "../assets/logo.png"
 import cu from "../assets/cu.png"
 import rocket from "../assets/rocket.svg"
 import sat from "../assets/sat.svg"
@@ -80,7 +80,7 @@ function GCS() {
   const [gpsAltitudeTS, setGpsAltitudeTS] = useState<TimeSeries>(new TimeSeries(timesconfig));
 
   // if (!window.__TAURI_IPC__) window.location.href = "/web";
-  
+
   const lightPositions = generateLightPositions()
 
   async function writeSerial(data: string) {
@@ -238,10 +238,10 @@ function GCS() {
   return <div className="grid grid-cols-3 w-screen h-screen justify-center">
     {/* <Toaster /> */}
     <div className="flex flex-col col-span-2">
-      <div className="flex items-center justify-between bg-orange-500 py-1">
-        <img src={logo} className="h-14 opacity-90" />
-        <div className="text-4xl font-bold text-center text-white/90">GROUND CONTROL STATION</div>
-        <img src={cu} className="h-14 " />
+      <div className="flex items-center justify-between  py-1">
+        <img src={logo} className="h-14 opacity-90 pl-1" />
+        <div className="text-4xl font-bold text-center text-black/90">GROUND CONTROL STATION</div>
+        <img src={cu} className="h-14 pr-1" />
       </div>
       <div className="p-1 flex justify-start items-center gap-2">
         <div id="battery" className="bg-black/5  h-[30px] w-20 ring-1 ring-black/70 m-1 rounded relative z-0 flex items-center justify-center">
@@ -432,7 +432,7 @@ function GCS() {
     </div>
     <div className="h-screen grid grid-rows-3 max-w-[33%] border-l border-black/50">
       <div className="flex flex-col">
-        <Canvas camera={{ position: [3, 2, 0], zoom:1.3 }} >
+        <Canvas camera={{ position: [3, 2, 0], zoom: 1.3 }} >
           <OrbitControls enableZoom enablePan={false} enableRotate autoRotate />
           {
             lightPositions.map((position, index) => (
@@ -440,18 +440,18 @@ function GCS() {
             ))
           }
           <Suspense>
-            <Model rotation={[Math.PI/18,0,0]} />
+            <Model rotation={[Math.PI / 18, 0, 0]} />
           </Suspense>
         </Canvas>
         <div className="w-full text-center border-t border-black/20">LAUNCH_WAIT</div>
       </div>
       <div className="bg-black/10 relative overflow-clip h-full border-t border-black/20" id="map">
-        <MapContainer center={[30.76861111, 76.57388889]} zoom={17} scrollWheelZoom={false} className="h-full">
+        <MapContainer center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [0.0, 0.0]} zoom={17} scrollWheelZoom={false} className="h-full">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
-          <CircleMarker center={[30.76861111, 76.57388889]} radius={3} color="red" >
+          <CircleMarker center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [0.0, 0.0]} radius={3} color="red" >
             <Popup>Vayu Cansat</Popup>
           </CircleMarker>
         </MapContainer>

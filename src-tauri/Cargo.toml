@@ -2,7 +2,7 @@
 name = "gcs-main"
 version = "0.0.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["ankushKun"]
 license = ""
 repository = ""
 edition = "2021"

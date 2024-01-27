@@ -5,6 +5,8 @@
 flight\ logs
 flight\ logs/
 
+.xwin-cache
+
 # Logs
 logs
 logs/
