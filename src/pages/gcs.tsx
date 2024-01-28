@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
 import "leaflet/dist/leaflet.css";
@@ -12,8 +12,7 @@ import { Model } from "../Cansat.tsx"
 import { simpdata } from "../../simp.ts"
 import logo from "../assets/logo.png"
 import cu from "../assets/cu.png"
-import rocket from "../assets/rocket.svg"
-import sat from "../assets/sat.svg"
+
 
 const teamId = 2117;
 
@@ -81,6 +80,7 @@ function GCS() {
 
   // if (!window.__TAURI_IPC__) window.location.href = "/web";
 
+
   const lightPositions = generateLightPositions()
 
   async function writeSerial(data: string) {
@@ -122,6 +122,7 @@ function GCS() {
     if (!result) return
     const data = result.split(",,")
     const pd = data[0].split(",")
+    console.log(pd)
     const ed = data[1] ? data[1].split(",") : ["", ""]
     const primaryData: RecvData = {
       teamID: parseInt(pd[0]) ? parseInt(pd[0]) : -1,
@@ -141,9 +142,9 @@ function GCS() {
       gpsLatitude: parseFloat(pd[14]) ? parseFloat(pd[14]) : -1,
       gpsLongitude: parseFloat(pd[15]) ? parseFloat(pd[15]) : -1,
       gpsSats: parseInt(pd[16]) ? parseInt(pd[16]) : -1,
-      tiltX: parseFloat(pd[17]) ? parseFloat(pd[17]) : -1,
-      tiltY: parseFloat(pd[18]) ? parseFloat(pd[18]) : -1,
-      rotZ: parseFloat(pd[19]) ? parseFloat(pd[19]) : -1,
+      tiltX: parseFloat(pd[17]),
+      tiltY: parseFloat(pd[18]),
+      rotZ: parseFloat(pd[19]),
       cmdEcho: pd[20],
       debugMsg: ed[0]
     };
@@ -185,7 +186,7 @@ function GCS() {
       setIntrvl(
         setInterval(() => {
           invoke("read_serial").then((e: any) => {
-            console.log(e)
+            // console.log(e)
             setResult(e.toString());
           }).catch((e) => {
             console.log(e)
@@ -199,6 +200,7 @@ function GCS() {
   }, [selectedPort]);
 
   async function sendSimpDataPerSecond() {
+    if (selectedPort == "NONE") return
     const simpList = simpdata.split("\n").filter((e) => e.startsWith("CMD"));
     console.log(simpList);
     let i = 0;
@@ -269,34 +271,59 @@ function GCS() {
             height={16}
           />
         </button>
-        <label htmlFor="cx">CX</label>
-        <input type="checkbox" id="cx" checked={telemetry} onChange={(e) => {
+        {/* <button className={`${telemetry ? "bg-green-300" : "bg-red-100"} h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-2 ring-green-500`} */}
+        {/*   onClick={() => { */}
+        {/*     // invoke("send_command", { telem: `CX,${telemetry ? "OFF" : "ON"}` }); */}
+        {/*     writeSerial(`CMD,${teamId},CX,${telemetry ? "OFF" : "ON"}`) */}
+        {/*     setTelemetry(!telemetry); */}
+        {/*   }} > */}
+        {/*   {telemetry ? "DISABLE" : "ENABLE"} COMMS</button> */}
+        {/* <label htmlFor="cx">CX</label> */}
+        {/*}<input type="checkbox" id="cx" checked={telemetry} onChange={(e) => {
           invoke("send_command", { telem: `CX,${e.target.checked ? "ON" : "OFF"}` });
           setTelemetry(e.target.checked);
-        }} />
+        }} />*/}
         <div className="grow"></div>
-        <label htmlFor="sim-enable" >SIMP ENABLE</label>
-        <input id="sim-enable" type="checkbox" onChange={(e) => {
+        <div>
+          <div className="flex justify-between items-center gap-1">
+            <label htmlFor="sim-enable" >SIMP ENABLE</label>
+            <input id="sim-enable" type="checkbox" onChange={(e) => {
+              e.target.checked && writeSerial(`CMD,${teamId},SIM,ENABLE`)
+              !e.target.checked && writeSerial(`CMD,${teamId},SIM,DISABLE`)
+            }} />
+          </div>
+          <div className="flex justify-between items-center gap-1">
+            <label htmlFor="sim-activate" >SIMP ACTIVATE</label>
+            <input id="sim-activate" type="checkbox" onChange={(e) => {
+              e.target.checked && writeSerial(`CMD,${teamId},SIM,ACTIVATE`)
+              !e.target.checked && writeSerial(`CMD,${teamId},SIM,DEACTIVATE`)
+            }} />
+          </div>
+        </div>
 
-          e.target.checked && writeSerial(`CMD,${teamId},SIM,ENABLE`)
-        }} />
-        <label htmlFor="sim-activate" >SIMP ACTIVATE</label>
-        <input id="sim-activate" type="checkbox" onChange={(e) => {
-          e.target.checked && writeSerial(`CMD,${teamId},SIM,ACTIVATE`)
-        }} />
-
-        <button onClick={sendSimpDataPerSecond} disabled={selectedPort == "none"} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
-          {simpRunning ? "SIM ✅" : "START SIM"}
+        <button onClick={sendSimpDataPerSecond} disabled={selectedPort == "NONE"} className={`${simpRunning ? "bg-green-300" : "bg-red-200"} h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500`}>
+          {simpRunning ? "STOP SIM" : "START SIM"}
         </button>
-        <button onClick={connect_mqtt} disabled={selectedPort == "none"} className="bg-green-300 h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500">
-          {mqttConnected ? "MQTT ✅" : "Connect MQTT"}
+        <button onClick={connect_mqtt} disabled={selectedPort == "NONE"} className={`${mqttConnected ? "bg-green-300" : "bg-red-200"} h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-1 ring-green-500`}>
+          {mqttConnected ? "STOP MQTT" : "START MQTT"}
         </button>
 
       </div>
       <div className="grow flex flex-col relative">
-        <div className="text-center text-black text-xs">{result}</div>
+        <div className="flex justify-between px-1">
+          <pre className="text-left text-black text-xs pl-2">Internal Clock : {primData?.time || "00:00:00"}<br />GPS Clock (UTC): {primData?.gpsTime || "00:00:00"}</pre>
+          <button className={`${telemetry ? "bg-green-300" : "bg-red-100"} h-fit text-black rounded active:bg-black active:text-green-500 ring-1 px-2 ring-green-500`}
+            onClick={() => {
+              // invoke("send_command", { telem: `CX,${telemetry ? "OFF" : "ON"}` });
+              writeSerial(`CMD,${teamId},CX,${telemetry ? "OFF" : "ON"}`)
+              setTelemetry(!telemetry);
+            }} >
+            {telemetry ? "DISABLE" : "ENABLE"} COMMS</button>
+
+        </div>
         <div className="grid grid-cols-2 gap-2 p-2 justify-evenly grow">
           <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <div className="text-center">Temperature [{primData?.temperature || 0}℃] 🌡</div>
             <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
               { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
             } labels={{ fillStyle: "rgb(0,0,0)" }}
@@ -317,9 +344,9 @@ function GCS() {
                 </pre>
               }}
             />
-            <div className="text-center">Temperature [{primData?.temperature || 0}℃] 🌡</div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <div className="text-center">Air Speed [{primData?.airSpeed || 0} kmph] 🌬</div>
             <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
               { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
             } labels={{ fillStyle: "rgb(0,0,0)" }}
@@ -340,13 +367,13 @@ function GCS() {
                 </pre>
               }}
             />
-            <div className="text-center">Air Speed [{primData?.airSpeed || 0} kmph] 🌬</div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 h-fit">
+            <div className="text-center">Pressure [{primData?.pressure || 0} P] 💨</div>
             <SmoothieComponent responsive className="rounded" millisPerPixel={millisppixel} grid={
               { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
             } labels={{ fillStyle: "rgb(0,0,0)" }}
-              maxValue={100000} minValue={85000} minValueScale={1.5} maxValueScale={1.5}
+              maxValue={100000} minValue={80000} minValueScale={1.5} maxValueScale={1.5}
               height={window.innerWidth * 0.15}
               scaleSmoothing={0.1}
               interpolation="linear"
@@ -368,14 +395,14 @@ function GCS() {
                 </pre>
               }}
             />
-            <div className="text-center">Pressure [{primData?.pressure || 0} P] 💨</div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 h-fit">
             <div className="flex min-w-full w-full">
               <div className="grow">
+                <div className="text-center">Altitude [{primData?.altitude || 0}m] 🗻</div>
                 <SmoothieComponent responsive className="rounded grow min-w-[100%]" millisPerPixel={millisppixel} grid={
                   { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
-                } labels={{ fillStyle: "rgb(0,0,0)" }} minValue={-200} maxValue={1000}
+                } labels={{ fillStyle: "rgb(0,0,0)" }} minValue={-100} maxValue={1000}
                   minValueScale={1.5} maxValueScale={1.5}
                   height={window.innerWidth * 0.15}
                   series={[
@@ -405,7 +432,6 @@ function GCS() {
               {/*   <img src={rocket} className="w-[50px] min-w-[50px] absolute bottom-10" /> */}
               {/* </div> */}
             </div>
-            <div className="text-center">Altitude [{primData?.altitude || 0}m] 🗻</div>
           </div>
           <div className="border border-black/50 rounded bg-black/5 min-h-[200px] p-1">
             <div className="bg-black/60 text-white h-full text-center rounded">
@@ -414,36 +440,60 @@ function GCS() {
           </div>
           <div className="border border-black/50 rounded bg-black/5 p-2 flex flex-col justify-center">
             <pre className="text-lg text-center mb-2">SYSTEM STATUS</pre>
-            <div className="flex justify-center items-center gap-10 grow">
+            <div className="grid grid-cols-3 justify-center items-center gap-1 grow mx-auto">
               <pre>
-                🟢 IMU<br />
-                🔴 Altimeter<br />
-                🔴 GPS<br />
+                🟢 IMU
               </pre>
               <pre>
-                🟢 Telemetry<br />
-                🔴 Airspeed<br />
-                🔴 Camera<br />
+                🟢 Barometer
+              </pre>
+              <pre>
+                🟢 GPS
+              </pre>
+              <pre>
+                🟢 Telemetry
+              </pre>
+              <pre>
+                🔴 Airspeed
+              </pre>
+              <pre>
+                🔴 Camera
+              </pre>
+              <pre>
+                🟡 SATS:5
+              </pre>
+              <pre>
+                🟢 RSSI:-8dBm
               </pre>
             </div>
           </div>
         </div>
+        <pre className="text-center text-black text-xs mb-2">{result || "."}</pre>
       </div>
     </div>
     <div className="h-screen grid grid-rows-3 max-w-[33%] border-l border-black/50">
       <div className="flex flex-col">
-        <Canvas camera={{ position: [3, 2, 0], zoom: 1.3 }} >
-          <OrbitControls enableZoom enablePan={false} enableRotate autoRotate />
-          {
-            lightPositions.map((position, index) => (
-              <directionalLight key={index} position={position} intensity={0.25} />
-            ))
-          }
-          <Suspense>
-            <Model rotation={[Math.PI / 18, 0, 0]} />
-          </Suspense>
-        </Canvas>
-        <div className="w-full text-center border-t border-black/20">LAUNCH_WAIT</div>
+        <div className="relative flex h-full">
+          <Canvas camera={{ position: [4, 0, 0], zoom: 1.3 }} className="">
+            <OrbitControls enableZoom enablePan={false} />
+            {
+              lightPositions.map((position, index) => (
+                <directionalLight key={index} position={position} intensity={0.25} />
+              ))
+            }
+            <Suspense>
+              <Model rotation={[-primData?.tiltX * Math.PI / 90 || 0, 0, primData?.tiltY * Math.PI / 90 || 0]} />
+            </Suspense>
+          </Canvas>
+          <div className="absolute bottom-0 left-0 right-0">
+            <pre className="text-sm p-0.5 border w-fit border-black/20">
+              Tilt X : {primData?.tiltX}°<br />
+              Tilt Y : {primData?.tiltY}°<br />
+              Rot  Z : {primData?.rotZ}°<br />
+            </pre>
+            <div className="w-full text-left">LAUNCH_WAIT</div>
+          </div>
+        </div>
       </div>
       <div className="bg-black/10 relative overflow-clip h-full border-t border-black/20" id="map">
         <MapContainer center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [0.0, 0.0]} zoom={17} scrollWheelZoom={false} className="h-full">
