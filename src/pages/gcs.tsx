@@ -139,8 +139,10 @@ function GCS() {
       pressure: parseFloat(pd[11]) ? parseFloat(pd[11]) : -1,
       gpsTime: pd[12],
       gpsAltitude: parseFloat(pd[13]) ? parseFloat(pd[13]) : -1,
-      gpsLatitude: parseFloat(pd[14]) ? parseFloat(pd[14]) : -1,
-      gpsLongitude: parseFloat(pd[15]) ? parseFloat(pd[15]) : -1,
+      // gpsLatitude: parseFloat(pd[14]) ? parseFloat(pd[14]) : -1,
+      // gpsLongitude: parseFloat(pd[15]) ? parseFloat(pd[15]) : -1,
+      gpsLatitude: 30.7688,
+      gpsLongitude: 76.5754,
       gpsSats: parseInt(pd[16]) ? parseInt(pd[16]) : -1,
       tiltX: parseFloat(pd[17]),
       tiltY: parseFloat(pd[18]),
@@ -160,13 +162,13 @@ function GCS() {
     var time = new Date().getTime();
     temperatureTS.append(time, primaryData?.temperature!);
     primaryData?.pressure != 0 && pressureTS.append(time, primaryData?.pressure!);
-    airSpeedTS.append(time, primaryData?.airSpeed!);
+    // airSpeedTS.append(time, primaryData?.airSpeed!);
     altitudeTS.append(time, primaryData?.altitude!);
     gpsAltitudeTS.append(time, primaryData?.gpsAltitude!);
 
     // temperatureTS.append(time, Math.random() * 10);
     // pressureTS.append(time, Math.random());
-    // airSpeedTS.append(time, Math.random());
+    airSpeedTS.append(time, Math.random());
     // altitudeTS.append(time, Math.random());
     // gpsAltitudeTS.append(time, Math.random());
   }, [result]);
@@ -193,7 +195,7 @@ function GCS() {
             setReading(false);
             clearInterval(intrvl);
           });
-        }, 1000),
+        }, 200),
       );
       setReading(false);
     }
@@ -351,6 +353,7 @@ function GCS() {
               { strokeStyle: "rgba(0,0,0,0.1)", fillStyle: "rgba(255,255,255,0.9)" }
             } labels={{ fillStyle: "rgb(0,0,0)" }}
               minValueScale={1.5} maxValueScale={1.5}
+              maxValue={10} minValue={-10}
               height={window.innerWidth * 0.15}
               series={
                 [{
@@ -496,12 +499,12 @@ function GCS() {
         </div>
       </div>
       <div className="bg-black/10 relative overflow-clip h-full border-t border-black/20" id="map">
-        <MapContainer center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [0.0, 0.0]} zoom={17} scrollWheelZoom={false} className="h-full">
+        <MapContainer center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [30.7687836, 76.5741186]} zoom={17} scrollWheelZoom={false} className="h-full">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
-          <CircleMarker center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [0.0, 0.0]} radius={3} color="red" >
+          <CircleMarker center={primData ? [primData.gpsLatitude, primData.gpsLongitude] : [30.7687836, 76.5741186]} radius={3} color="red" >
             <Popup>Vayu Cansat</Popup>
           </CircleMarker>
         </MapContainer>
