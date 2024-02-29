@@ -12,7 +12,21 @@ import { Model } from "../Cansat.tsx"
 import { simpdata } from "../../simp.ts"
 import logo from "../assets/logo.png"
 import cu from "../assets/cu.png"
+import { initializeApp } from "firebase/app";
+import { getDatabase, set, get, ref } from "firebase/database"
 
+const firebaseConfig = {
+  apiKey: "AIzaSyAmRc9DDzMmNh_YT5PmQd3X6A_mJZG7WXA",
+  authDomain: "personal-projects-69.firebaseapp.com",
+  databaseURL: "https://personal-projects-69-default-rtdb.firebaseio.com",
+  projectId: "personal-projects-69",
+  storageBucket: "personal-projects-69.appspot.com",
+  messagingSenderId: "800698599496",
+  appId: "1:800698599496:web:9e0f1f4cac1c0b1584307d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase();
 
 const teamId = 2117;
 
@@ -114,7 +128,8 @@ function GCS() {
   }
 
   useEffect(() => {
-    setInterval(() => getMqttStatus(), 500);
+    if (window.__TAURI_IPC__)
+      setInterval(() => getMqttStatus(), 500);
   }, []);
 
   useEffect(() => {
@@ -123,6 +138,8 @@ function GCS() {
     const data = result.split(",,")
     const pd = data[0].split(",")
     console.log(pd)
+    if (window.__TAURI_IPC__)
+      set(ref(db, "2117"), pd.toString())
     const ed = data[1] ? data[1].split(",") : ["", ""]
     const primaryData: RecvData = {
       teamID: parseInt(pd[0]) ? parseInt(pd[0]) : -1,
@@ -179,22 +196,47 @@ function GCS() {
 
   useEffect(() => {
     console.log(selectedPort, reading);
-    setResult("");
+    // setResult("");
+    // if (!window.__TAURI_IPC__) {
+    //   get(ref(db, "2117")).then((snapshot) => {
+    //     if (snapshot.exists()) {
+    //       console.log(snapshot.val());
+    //       setResult(snapshot.val());
+    //     } else {
+    //       console.log("No data available");
+    //     }
+    //   }).catch((error) => {
+    //     console.error(error);
+    //   })
+    //   return
+    // }
     if (!selectedPort) {
       setReading(!reading);
       clearInterval(intrvl);
-    } else if (reading && selectedPort) {
+    } else if (!window.__TAURI_IPC__ ||reading && selectedPort) {
       clearInterval(intrvl);
       setIntrvl(
         setInterval(() => {
-          invoke("read_serial").then((e: any) => {
-            // console.log(e)
-            setResult(e.toString());
-          }).catch((e) => {
-            console.log(e)
-            setReading(false);
-            clearInterval(intrvl);
-          });
+          if (window.__TAURI_IPC__)
+            invoke("read_serial").then((e: any) => {
+              // console.log(e)
+              setResult(e.toString());
+            }).catch((e) => {
+              console.log(e)
+              setReading(false);
+              clearInterval(intrvl);
+            });
+          else
+            get(ref(db, "2117")).then((snapshot) => {
+              if (snapshot.exists()) {
+                console.log(snapshot.val());
+                setResult(snapshot.val());
+              } else {
+                console.log("No data available");
+              }
+            }).catch((error) => {
+              console.error(error);
+            })
         }, 200),
       );
       setReading(false);
